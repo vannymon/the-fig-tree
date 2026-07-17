@@ -1,0 +1,6 @@
+# Local tooling config
+.claude/
+
+# OS cruft
+.DS_Store
+Thumbs.db
