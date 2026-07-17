@@ -246,7 +246,8 @@ let state = {
   branches:[], selectedId:null, panelOpen:false, modalOpen:false, helpOpen:false,
   isMobile:window.innerWidth<720,
   form:{label:'',mastery:'curious',color:'#7A9E5F'},
-  composerOpen:false, composerBody:'', composerMood:null, confirmDelete:false, toast:null
+  composerOpen:false, composerBody:'', composerMood:null, confirmDelete:false, toast:null,
+  editing:false, editForm:{label:'',color:''}
 };
 let _noStore=false, _toastT=null, store=null;
 
@@ -679,7 +680,7 @@ function applySelectionGlow(id){
   scene.add(glowMesh);refs._glowMesh=glowMesh;
 }
 
-function selectBranch(id){state.selectedId=id;state.panelOpen=true;state.composerOpen=false;state.composerBody='';state.composerMood=null;state.confirmDelete=false;state.modalOpen=false;applySelectionGlow(id);renderPanel();updatePanelVis();updateModalVis();const r=objs[id];if(r&&controls&&window.gsap&&!reduced){const camDir=new THREE.Vector3().subVectors(camera.position,controls.target).normalize();const zoomDist=6;const newTarget=r.end.clone();newTarget.y-=0.2;const newCam=newTarget.clone().add(camDir.multiplyScalar(zoomDist));window.gsap.to(controls.target,{x:newTarget.x,y:newTarget.y,z:newTarget.z,duration:0.8,ease:'power2.inOut'});window.gsap.to(camera.position,{x:newCam.x,y:newCam.y,z:newCam.z,duration:0.8,ease:'power2.inOut'});}}
+function selectBranch(id){state.selectedId=id;state.panelOpen=true;state.composerOpen=false;state.composerBody='';state.composerMood=null;state.confirmDelete=false;state.editing=false;state.modalOpen=false;applySelectionGlow(id);renderPanel();updatePanelVis();updateModalVis();const r=objs[id];if(r&&controls&&window.gsap&&!reduced){const camDir=new THREE.Vector3().subVectors(camera.position,controls.target).normalize();const zoomDist=6;const newTarget=r.end.clone();newTarget.y-=0.2;const newCam=newTarget.clone().add(camDir.multiplyScalar(zoomDist));window.gsap.to(controls.target,{x:newTarget.x,y:newTarget.y,z:newTarget.z,duration:0.8,ease:'power2.inOut'});window.gsap.to(camera.position,{x:newCam.x,y:newCam.y,z:newCam.z,duration:0.8,ease:'power2.inOut'});}}
 
 /* ===================== RENDER LOOP ===================== */
 function animate() {
@@ -824,7 +825,34 @@ function renderPanel() {
   const composerHTML=state.composerOpen?`<div><div style="font-size:10px;color:var(--term-dim);margin-bottom:6px;letter-spacing:1px;text-transform:uppercase;">// log entry</div><textarea id="composer-body" placeholder="today i..." style="width:100%;min-height:70px;resize:vertical;background:rgba(255,255,255,.04);border:1px solid var(--term-border);padding:8px;font-family:var(--mono);font-size:11px;line-height:1.5;color:var(--term-fg);border-radius:0;">${escapeHTML(state.composerBody)}</textarea><div style="font-size:10px;color:var(--term-dim);margin-top:4px;">${2000-state.composerBody.length} chars</div><div style="font-size:10px;color:var(--term-dim);margin-top:8px;letter-spacing:1px;text-transform:uppercase;">mood --optional</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">${MOODS.map(m=>{const on=state.composerMood===m;return`<button class="mood-btn" data-mood="${m}" style="background:${on?MOOD_COLORS[m]:'transparent'};color:${on?'#fff':'var(--term-dim)'};border:1px solid ${on?MOOD_COLORS[m]:'var(--term-border)'};padding:4px 10px;font-family:var(--mono);font-size:10px;cursor:pointer;letter-spacing:1px;text-transform:uppercase;border-radius:0;">${m}</button>`;}).join('')}</div><div style="display:flex;gap:6px;margin-top:10px;"><button id="btn-save-log" class="term-btn" style="flex:1;">[ SAVE ]</button><button id="btn-cancel-composer" class="term-btn-ghost">[ CANCEL ]</button></div></div>`:`<button id="btn-open-composer" style="background:transparent;border:1px dashed var(--term-border);padding:8px;cursor:pointer;font-family:var(--mono);font-size:10px;color:var(--term-dim);display:flex;align-items:center;justify-content:center;width:100%;transition:all .1s;letter-spacing:1px;text-transform:uppercase;border-radius:0;">[ + ADD LOG ]</button>`;
   const deleteHTML=state.confirmDelete?`<div style="border:1px solid var(--term-border);padding:10px;"><div style="font-size:10px;color:var(--term-fg);letter-spacing:1px;text-transform:uppercase;">confirm delete?</div><div style="font-size:10px;color:var(--term-dim);margin-top:3px;">// this cannot be undone</div><div style="display:flex;gap:6px;margin-top:8px;"><button id="btn-confirm-delete" class="term-btn" style="font-size:10px;padding:5px 10px;">[ YES ]</button><button id="btn-cancel-delete" class="term-btn-ghost" style="font-size:10px;padding:5px 10px;">[ NO ]</button></div></div>`:`<button id="btn-ask-delete" style="background:transparent;border:none;padding:0;cursor:pointer;font-family:var(--mono);font-size:10px;color:var(--term-dim);letter-spacing:1px;text-transform:uppercase;">--delete branch</button>`;
 
+  if(state.editing){
+    const ef=state.editForm;
+    const editColorsHTML=BRANCH_COLORS.map(col=>{const active=ef.color===col;return`<button class="edit-color-opt" data-color="${col}" style="width:24px;height:24px;border-radius:0;background:${col};cursor:pointer;border:${active?'2px solid var(--term-fg)':'2px solid transparent'};outline:${active?'1px solid var(--term-border)':'none'};padding:0;transition:all .1s;"></button>`;}).join('');
+    c.innerHTML=`
+      <button class="ft-ibtn" id="btn-close-panel" title="Close" style="position:absolute;top:6px;right:6px;z-index:2;padding:4px 8px;background:transparent;border:1px solid var(--term-border);cursor:pointer;color:var(--term-dim);font-family:var(--mono);font-size:10px;">[x]</button>
+      <div style="padding:14px;">
+        <div style="font-size:10px;color:var(--term-dim);letter-spacing:1px;border-bottom:1px solid var(--term-border);padding-bottom:8px;margin-bottom:12px;">+--- EDIT BRANCH ---+</div>
+        <div style="font-size:9px;color:var(--term-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:5px;">$ branch --name</div>
+        <input id="edit-label" value="${escapeHTML(ef.label)}" maxlength="32" style="width:100%;background:rgba(255,255,255,.04);border:1px solid var(--term-border);padding:7px 9px;font-family:var(--mono);font-size:11px;color:var(--term-fg);border-radius:0;" />
+        <div style="font-size:9px;color:var(--term-dim);letter-spacing:1px;text-transform:uppercase;margin:12px 0 6px;">--color</div>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;">${editColorsHTML}</div>
+        <div style="display:flex;gap:6px;margin-top:14px;">
+          <button id="btn-edit-save" class="term-btn" style="flex:1;font-size:10px;padding:7px 10px;">[ SAVE ]</button>
+          <button id="btn-edit-cancel" class="term-btn-ghost" style="font-size:10px;padding:7px 10px;">[ CANCEL ]</button>
+        </div>
+      </div>`;
+    document.getElementById('btn-close-panel')?.addEventListener('click',closePanel);
+    document.getElementById('edit-label')?.addEventListener('input',e=>{state.editForm.label=e.target.value.slice(0,32);});
+    c.querySelectorAll('.edit-color-opt').forEach(el=>el.addEventListener('click',()=>{state.editForm.color=el.dataset.color;renderPanel();}));
+    document.getElementById('btn-edit-cancel')?.addEventListener('click',()=>{state.editing=false;renderPanel();});
+    document.getElementById('btn-edit-save')?.addEventListener('click',saveEdit);
+    c.addEventListener('click',e=>e.stopPropagation());
+    setTimeout(()=>{document.getElementById('edit-label')?.focus();},50);
+    return;
+  }
+
   c.innerHTML=`
+    <button class="ft-ibtn" id="btn-edit-branch" title="Edit" style="position:absolute;top:6px;right:44px;z-index:2;padding:4px 8px;background:transparent;border:1px solid var(--term-border);cursor:pointer;color:var(--term-dim);font-family:var(--mono);font-size:10px;">[edit]</button>
     <button class="ft-ibtn" id="btn-close-panel" title="Close" style="position:absolute;top:6px;right:6px;z-index:2;padding:4px 8px;background:transparent;border:1px solid var(--term-border);cursor:pointer;color:var(--term-dim);font-family:var(--mono);font-size:10px;">[x]</button>
     <div style="position:relative;display:flex;flex-direction:column;align-items:center;padding:14px 14px 0;">
       <div style="width:40px;height:40px;border-radius:50%;background:radial-gradient(circle,${branchColor}33 0%,transparent 70%);border:1px solid ${branchColor}66;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 14px ${branchColor}22;">${MASTERY_ICONS[sel.masteryLevel]}</div>
@@ -873,6 +901,7 @@ function renderPanel() {
 
   c.querySelectorAll('.mastery-opt').forEach(el=>el.addEventListener('click',()=>{const k=el.dataset.mastery;const id=state.selectedId;if(!id)return;state.branches=state.branches.map(b=>b.id===id?Object.assign({},b,{masteryLevel:k}):b);save();const b=state.branches.find(x=>x.id===id);const r=objs[id];if(r)replaceFruit(b,r);renderPanel();}));
   document.getElementById('btn-close-panel')?.addEventListener('click',closePanel);
+  document.getElementById('btn-edit-branch')?.addEventListener('click',()=>{state.editing=true;state.editForm={label:sel.label,color:sel.color||'#7A9E5F'};renderPanel();});
   document.getElementById('btn-share-fig')?.addEventListener('click',shareFig);
   document.getElementById('btn-open-composer')?.addEventListener('click',()=>{state.composerOpen=true;renderPanel();});
   document.getElementById('btn-cancel-composer')?.addEventListener('click',()=>{state.composerOpen=false;state.composerBody='';state.composerMood=null;renderPanel();});
@@ -905,6 +934,29 @@ function renderModal() {
 function plantBranch(){const f=state.form;const label=(f.label||'').trim();if(!label)return;const b={id:uuid(),label,color:f.color,masteryLevel:f.mastery,position:makePosition(f.mastery),createdAt:new Date().toISOString(),lastLoggedAt:null,witherState:'healthy',logs:[]};state.branches.push(b);state.modalOpen=false;updateModalVis();updateEmptyState();buildBranch(b,true);save();if(controls&&window.gsap&&!reduced){const r=objs[b.id];window.gsap.to(controls.target,{x:r.end.x*0.25,y:Math.max(3,r.end.y*0.7),z:r.end.z*0.25,duration:1,ease:'power2.out'});}}
 
 function saveLog(){const id=state.selectedId;const body=state.composerBody.trim();if(!id||!body)return;const log={id:uuid(),branchId:id,createdAt:new Date().toISOString(),body,mood:state.composerMood};let wasWithered=false;state.branches=state.branches.map(b=>{if(b.id!==id)return b;wasWithered=(b.witherState!=='healthy');return Object.assign({},b,{logs:[log].concat(b.logs||[]),lastLoggedAt:log.createdAt,witherState:'healthy'});});state.composerOpen=false;state.composerBody='';state.composerMood=null;save();renderPanel();const b=state.branches.find(x=>x.id===id);const r=objs[id];if(r){r.witherState='healthy';replaceFruit(b,r);animFruitPop(r);}}
+
+function saveEdit(){
+  const id=state.selectedId;if(!id)return;
+  const label=(state.editForm.label||'').trim();
+  if(!label)return;
+  const color=state.editForm.color;
+  state.branches=state.branches.map(b=>b.id===id?Object.assign({},b,{label,color}):b);
+  save();
+  const b=state.branches.find(x=>x.id===id);
+  const refs=objs[id];
+  if(refs){
+    // Refresh 3D label sprite
+    if(refs.label){scene.remove(refs.label);refs.label.material.map?.dispose();refs.label.material.dispose();}
+    refs.label=makeLabel(label);
+    refs.label.position.set(refs.end.x,refs.end.y+0.9,refs.end.z);
+    scene.add(refs.label);
+    // Refresh fruit color + selection glow
+    replaceFruit(b,refs);
+    applySelectionGlow(id);
+  }
+  state.editing=false;
+  renderPanel();
+}
 
 function deleteBranch(){const id=state.selectedId;if(!id)return;const r=objs[id];const finish=()=>{if(r){[r.branchMesh,r.stemMesh,r.fruit,r.label,...r.leaves].forEach(o=>{if(o?.parent)o.parent.remove(o);});delete objs[id];}state.branches=state.branches.filter(b=>b.id!==id);state.panelOpen=false;state.selectedId=null;state.confirmDelete=false;save();updatePanelVis();updateEmptyState();};if(r)animDelete(r,finish);else finish();}
 
